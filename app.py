@@ -1,36 +1,20 @@
-from flask import Flask, request, jsonify, send_file
-from PIL import Image, ImageDraw
-import io
+import requests
 
-app = Flask(__name__)
+# URL do backend Flask (mude se necessário)
+url = "http://127.0.0.1:5000/process-image"
 
+# Envia a imagem para o servidor e salva a resposta
+try:
+    with open("input.png", "rb") as img_file:  # Abre a imagem de entrada
+        response = requests.post(url, files={"image": img_file})
 
-@app.route('/process-image', methods=['POST'])
-def process_image():
-    try:
+    if response.status_code == 200:
+        # Salva a imagem recebida do servidor
+        with open("output.png", "wb") as f:
+            f.write(response.content)
+        print("Imagem processada salva como 'output.png'")
+    else:
+        print("Erro ao processar a imagem:", response.json())
 
-        if 'image' not in request.files:
-            return jsonify({"error": "Nenhuma imagem enviada"}), 400
-
-        file = request.files['image']
-        img = Image.open(file).convert("RGBA")
-
-
-        width, height = img.size
-        radius = 50  
-        mask = Image.new("L", (width, height), 0)
-        draw = ImageDraw.Draw(mask)
-        draw.rounded_rectangle((0, 0, width, height), radius=radius, fill=255)
-
-        img.putalpha(mask)  
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        return send_file(buffer, mimetype='image/png')
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+except Exception as e:
+    print("Ocorreu um erro:", str(e))
